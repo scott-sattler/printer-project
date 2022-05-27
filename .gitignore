@@ -2,6 +2,7 @@
 _old*
 _test*
 scratch
+.idea/
 
 
 # Byte-compiled / optimized / DLL files
