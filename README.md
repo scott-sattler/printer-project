@@ -9,3 +9,6 @@ from IDE, run pysimplegui.py
 
 to compile single file executable:<br>
 pyinstaller -F --noconsole pysimplegui.py
+
+## TODO:
+add toggle for prompt constraints
