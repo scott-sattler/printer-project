@@ -11,4 +11,5 @@ to compile single file executable:<br>
 pyinstaller -F --noconsole pysimplegui.py
 
 ## TODO:
+disable debugging flags and/or
 add toggle for prompt constraints
