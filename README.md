@@ -3,7 +3,7 @@
 local tech company technical interview prompt
 
 main.py: uses console; contains app logic<br>
-pysimplegui.py: is a functional (vs OOP) gui
+pysimplegui.py: is a functional (vs OOP) GUI
 
 from IDE, run pysimplegui.py
 
