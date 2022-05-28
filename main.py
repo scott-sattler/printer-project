@@ -7,17 +7,48 @@ import threading
 
 """
 prompt:
-printer that accepts user input
-instructions for compiling and executing code in chosen language
-detailed code comments explaining thought process and any assumptions made
+    printer that accepts user input
+    instructions for compiling and executing code in chosen language
+    detailed code comments explaining thought process and any assumptions made
 
-print when buffer (1024 char) full
-print if unprinted for 10 seconds
-print method should not wait on completion
+imposed constraints:
+    print when buffer (1024 char) full
+    print if unprinted for 10 seconds
+    print method should not wait on completion
 
 assumptions:
     labels (ie label paper cuts) require no margin between them
     computational costs are negligible
+"""
+
+"""
+function:
+    <run()> loops while print jobs are pending \n
+    <run()> checks pending expirations at tuple[0] in <label_queue> <=> tuple[float, str] \n
+    <run()> checks buffer fill with the sum of len(str) over tuple_n[1] in <label_queue> \n
+    pending print jobs are buffered within a threadsafe(?) queue <label_queue> \n
+    <add_print_job()> accepts strings not exceeding <self.buffer_capacity> \n
+    empty text strings are ignored \n
+    rejected <add_print_job()> strings are automatically sent to printer for informative user notification \n
+    queued jobs are naively/greedily bin-packed and the remaining, unexpired jobs, are returned to <run()> loop \n
+
+threading vs multiprocessing:
+    https://stackoverflow.com/a/18114882 (summary at the end) \n
+
+optimization was not properly implemented:
+    between threading in python (oof) and optimization, each can take up to a few days or more \n
+
+comments:
+    this was a fun exercise! \n
+    the imposed time constraints are unrealistic without prior knowledge of the topics covered \n
+    using python felt like a hindrance; I debated switching to C#, or even learning TypeScript, a few times... \n
+
+areas to improve:
+    planning and execution (research; experience/practice) \n
+    understanding of application scale design (mostly research) \n
+    python threading/multiprocessing, or familiarity with more suitable languages (experience/practice) \n
+    generalizable optimization knowledge, eg operations research, bin sorting (research; experience/practice) \n
+    likely whatever feedback I get from codereview \n
 """
 
 
@@ -67,55 +98,38 @@ class InspectQueue(queue.Queue):
 
 
 class Printer(InspectQueue):
-    """
-    function:
-        <run()> loops while print jobs are pending \n
-        <run()> checks pending expirations at tuple[0] in <label_queue> <=> tuple[float, str] \n
-        <run()> checks buffer fill with the sum of len(str) over tuple_n[1] in <label_queue> \n
-        pending print jobs are buffered within a threadsafe(?) queue <label_queue> \n
-        <add_print_job()> accepts strings not exceeding <self.buffer_capacity> \n
-        empty text strings are ignored \n
-        rejected <add_print_job()> strings are automatically sent to printer for informative user notification \n
-        queued jobs are naively/greedily bin-packed and the remaining, unexpired jobs, are returned to <run()> loop \n
-
-    comments:
-        this was a fun exercise! \n
-        the imposed time constraints are unrealistic without prior knowledge of the topics covered \n
-        using python felt like a hindrance; I debated switching to C#, or even learning TypeScript, a few times... \n
-
-    threading vs multiprocessing:
-        https://stackoverflow.com/a/18114882 (summary at the end) \n
-
-    optimization was not properly implemented:
-        between threading in python (oof) and optimization, each can take up to a few days or more \n
-
-    areas to improve:
-        planning and execution (research; experience/practice) \n
-        understanding of application scale design (mostly research) \n
-        python threading/multiprocessing, or familiarity with more suitable languages (experience/practice) \n
-        generalizable optimization knowledge, eg operations research, bin sorting (research; experience/practice) \n
-        likely whatever feedback I get from codereview \n
+    """ TODO: docstrings ...
+    subclass of InspectQueue \n
+    InspectQueue is a subclass of Queue \n
+    :param enqueue_print: not implemented; old code
+    :param debug: when True, default_debug_values = {'text': True, 'buffer': 12, 'time': 6}
     """
 
-    def __init__(self, enqueue_print: bool = False, debugging: bool = False, debugging_values: bool = False):
-        # detect_overridden(Printer, self)
-        InspectQueue.__init__(self)
+    # TODO: implement or remove enqueue_print.
+    def __init__(self, enqueue_print: bool = False, debug: bool | dict = False):
+        """ :param debug: False; True; {'text': True, 'buffer': 12, 'time': 6} """
+        # detect_overridden(Printer, slf)
         queue.Queue.__init__(self)
+        InspectQueue.__init__(self)
 
         # imposed constraints
-        self.buffer_capacity: int = 1024  # default: 1024 characters
-        self.queue_timeout_sec: float = 10.0  # default: 10 seconds
+        self._default_constraints = {'buffer_capacity': 1024, 'queue_timeout_sec': 10}
+        self.buffer_capacity: int = self._default_constraints['buffer_capacity']
+        self.queue_timeout_sec: float = self._default_constraints['queue_timeout_sec']
 
-        # debugging for easier review
-        self.debugging = debugging
-        self.debugging_values = debugging_values
-        if self.debugging_values:
-            self.buffer_capacity = 12
-            self.queue_timeout_sec = 6.0
+        # debug for easier review
+        self.default_debug_values = {'text': False, 'buffer_capacity': 12, 'queue_timeout_sec': 6}
+        if debug is True:
+            debug = self.default_debug_values
+        if debug is not False:
+            self.debug_text = debug['text']
+            self.buffer_capacity = debug['buffer_capacity']
+            self.queue_timeout_sec = debug['queue_timeout_sec']
 
         # chosen data structure
         self.label_queue: InspectQueue[tuple[float, str]] = InspectQueue()
 
+        # TODO: REVIEW for removal
         self.enqueue_print = enqueue_print
         self.print_log: InspectQueue = InspectQueue()
 
@@ -131,7 +145,7 @@ class Printer(InspectQueue):
 
         # loop until buffer empty
         while self.label_queue.qsize() > 0:
-            time.sleep(.1)  # TODO: REMOVE; reduces my cpu fan noise; !suppresses dbg appearance of scheduling errors
+            time.sleep(.1)  # TODO: FIX; reduces cpu fan noise; !!suppresses scheduling errors
             # constraint tests: expiration and buffer
             if time_to_print_at > current_time and buffer_not_full:
                 current_time = time.time()
@@ -140,10 +154,9 @@ class Printer(InspectQueue):
                 current_queue_size = self.label_queue.find_size()  # can be further optimized
                 if current_queue_size >= self.buffer_capacity:
                     buffer_not_full = False
-                    if self.debugging: print("overflow triggered")  # noqa
+                    if self.debug_text: print("overflow triggered")  # noqa
             else:
                 print_ready_label = self.optimizer()
-                # self.send_to_printer(print_ready_label)
                 threading.Thread(target=self.send_to_printer, kwargs={'text_to_print': print_ready_label}).start()
                 current_queue_size = self.label_queue.find_size()  # can be further optimized
                 buffer_not_full = current_queue_size < self.buffer_capacity  # can be further optimized
@@ -174,15 +187,15 @@ class Printer(InspectQueue):
 
         len_fn = lambda x: sum([len(i[1]) for i in x])  # noqa | callable length function | bad practice
 
-        # since a print must occur to clear buffer overflows
+        # implicit expiration/temporal trigger
         # printing all pending jobs satisfies label usage minimization
         if len_fn(queue_list) <= self.buffer_capacity:
             send_to_printer = queue_list
-        # else fill label buffer and return remaining
+        # else quasi-optimally fill label buffer and return remaining
         else:
-            send_to_printer = [queue_list.pop(0)]  # seeded with most recently expiring job
             re_queue_list = list()
             queue_list.sort(key=lambda x: len(x[1]), reverse=True)  # sort by descending label length
+            send_to_printer = [queue_list.pop(0)]  # greedily seed
             for each_job in queue_list:
                 if len_fn(send_to_printer) + len(each_job[1]) <= self.buffer_capacity:
                     send_to_printer.append(each_job)
@@ -206,12 +219,11 @@ class Printer(InspectQueue):
             queue_item = (job_execute_time, label_text)  # optimization may use a hashtable
             self.label_queue.put(queue_item)
 
-            if self.debugging: print("queue_item:", queue_item)  # noqa
+            if self.debug_text: print("queue_item:", queue_item)  # noqa
             if not self.is_running_flag:
-                self.run()
+                self.run()  # TODO: threading this help?
         else:
             print_string = f"text \"{label_text}\" exceeds buffer capacity of {self.buffer_capacity} characters"
-            # self.send_to_printer(text_to_print=print_string)
             threading.Thread(target=self.send_to_printer, kwargs={'text_to_print': print_string}).start()
 
     # adds existing jobs back to queue
@@ -228,23 +240,23 @@ class Printer(InspectQueue):
         if enqueue_print is None:
             enqueue_print = self.enqueue_print
 
-        if isinstance(text_to_print, list):
-            for each_label in text_to_print:
-                if self.debugging: each_label = ("print_time:" + str(time.time()) + " | " + each_label)  # noqa
-                if enqueue_print:
-                    self.print_log.put(each_label)
-                else:
-                    print(each_label)
-        else:
-            if self.debugging: text_to_print = ("print_time:" + str(time.time()) + " | " + text_to_print)  # noqa
+        if not isinstance(text_to_print, list):
+            text_to_print = [text_to_print]
+
+        for each_label in text_to_print:
+            if self.debug_text: each_label = ("print_time:" + str(time.time()) + " | " + each_label)  # noqa
             if enqueue_print:
-                self.print_log.put(text_to_print)
+                self.print_log.put(each_label)
             else:
-                print(text_to_print)
+                print(each_label)
+
+    @property
+    def default_constraints(self):
+        return self._default_constraints
 
 
 if __name__ == "__main__":
-    app = Printer(debugging=False, debugging_values=True)
+    app = Printer(debug=True)
     # setattr(app, 'buffer_capacity', 1024)
     # setattr(app, 'queue_timeout_sec', 10)
 
