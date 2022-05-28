@@ -11,5 +11,5 @@ to compile single file executable:<br>
 pyinstaller -F --noconsole main_gui.py
 
 ## TODO:
-disable debugging flags and/or<br>
-add toggle for prompt constraints
+~~disable debugging flags and/or<br>
+add toggle for prompt constraints~~
