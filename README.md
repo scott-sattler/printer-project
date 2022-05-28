@@ -3,12 +3,12 @@
 local tech company technical interview prompt
 
 main.py: uses console; contains app logic<br>
-pysimplegui.py: is a functional (vs OOP) GUI
+main_gui.py: is a functional (vs OOP) GUI
 
-from IDE, run pysimplegui.py
+from IDE, run main_gui.py
 
 to compile single file executable:<br>
-pyinstaller -F --noconsole pysimplegui.py
+pyinstaller -F --noconsole main_gui.py
 
 ## TODO:
 disable debugging flags and/or<br>
