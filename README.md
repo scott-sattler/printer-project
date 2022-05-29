@@ -1,5 +1,7 @@
 # printer-project
 
+![alt_text](https://github.com/scott-sattler/printer-project/blob/main/tech_test_printer_screen.png?raw=true)
+
 local tech company technical interview prompt
 
 main.py: uses console; contains app logic<br>
