@@ -14,5 +14,5 @@ pyinstaller -F --noconsole main_gui.py
 
 ## TODO:
 ~~disable debugging flags and/or<br>
-add toggle for prompt constraints~~
+add toggle for prompt constraints~~<br>
 debug threading
