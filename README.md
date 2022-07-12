@@ -4,6 +4,16 @@
 
 local tech company technical interview prompt
 
+prompt: <br>
+&emsp; printer that accepts user input <br>
+&emsp; instructions for compiling and executing code in chosen language <br>
+&emsp; detailed code comments explaining thought process and any assumptions made <br>
+
+imposed constraints: <br>
+&emsp; print when buffer (1024 char) full <br>
+&emsp; print if unprinted for 10 seconds <br>
+&emsp; print method should not wait on completion <br>
+
 main.py: uses console; contains app logic<br>
 main_gui.py: is a functional (vs OOP) GUI
 
